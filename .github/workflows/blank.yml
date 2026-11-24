@@ -1,0 +1,37 @@
+name: Montar ISO do ByteOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extrair o projeto
+        run: unzip -o byteos-live-build.zip
+
+      - name: Liberar espaço em disco
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache
+          df -h /
+
+      - name: Montar a ISO (dentro de um Debian trixie)
+        run: |
+          docker run --rm --privileged -v "$PWD":/work -w /work debian:trixie bash ./build.sh
+
+      - name: Gerar checksum
+        run: sha256sum *.iso > SHA256SUMS
+
+      - name: Guardar a ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: ByteOS-iso
+          path: |
+            *.iso
+            SHA256SUMS
+          compression-level: 0
